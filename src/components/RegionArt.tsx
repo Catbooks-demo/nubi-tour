@@ -102,8 +102,10 @@ function Silhouette({ region }: { region: string }) {
 
 export function RegionArt({ region, seed = region, className = "" }: { region: string; seed?: string; className?: string }) {
   const h = hash(seed);
-  const [top, bottom] = SKIES[h % SKIES.length];
-  const id = `sky-${region}-${h % 997}`;
+  const [top, bottom] = SKIES[(h >>> 3) % SKIES.length];
+  const flip = (h >>> 5) % 2 === 1;
+  const sun = { x: 40 + ((h >>> 9) % 320), y: 34 + ((h >>> 13) % 40), r: 10 + ((h >>> 17) % 10) };
+  const id = `sky-${region}-${h % 9973}`;
   return (
     <svg viewBox="0 0 400 200" preserveAspectRatio="xMidYMax slice" className={className} role="img" aria-hidden="true">
       <defs>
@@ -113,7 +115,10 @@ export function RegionArt({ region, seed = region, className = "" }: { region: s
         </linearGradient>
       </defs>
       <rect width="400" height="200" fill={`url(#${id})`} />
-      <Silhouette region={region} />
+      <circle cx={sun.x} cy={sun.y} r={sun.r} fill="#ffffff" opacity=".22" />
+      <g transform={`translate(${flip ? 400 : 0} 0) scale(${flip ? -1 : 1} 1)`}>
+        <Silhouette region={region} />
+      </g>
     </svg>
   );
 }

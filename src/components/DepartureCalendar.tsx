@@ -97,7 +97,7 @@ export function DepartureCalendar({ departures, initialId }: { departures: Depar
             </div>
             <span className={`badge ${DEPARTURE_BADGE[selected.status]?.tone}`}>{DEPARTURE_BADGE[selected.status]?.label}</span>
           </div>
-          <dl className="grid grid-cols-2 gap-x-4 gap-y-1 border-t-2 border-dashed border-slate-200 px-4 py-3 text-sm sm:grid-cols-4">
+          <dl className="grid grid-cols-2 gap-x-4 gap-y-1 border-t-2 border-dashed border-slate-200 px-4 py-3 text-sm">
             <div><dt className="text-slate-500">성인</dt><dd className="price text-base">{won(selected.price_adult)}</dd></div>
             <div><dt className="text-slate-500">아동 (만 12세 미만)</dt><dd className="font-semibold tabular-nums">{won(selected.price_child)}</dd></div>
             <div><dt className="text-slate-500">유아 (만 2세 미만)</dt><dd className="font-semibold tabular-nums">{won(selected.price_infant)}</dd></div>

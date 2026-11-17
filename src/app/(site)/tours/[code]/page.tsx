@@ -28,7 +28,8 @@ export default async function TourPage({ params, searchParams }: Props) {
     <div className="mx-auto max-w-6xl px-4 py-6">
       <nav aria-label="경로" className="text-sm text-slate-500">
         <Link href="/" className="hover:underline">홈</Link> ›{" "}
-        <Link href={`/tours?region=${p.region.code}`} className="hover:underline">{p.region.name}</Link> › {p.country}
+        <Link href={`/tours?region=${p.region.code}`} className="hover:underline">{p.region.name}</Link>
+        {p.country !== p.region.name && <> › {p.country}</>}
       </nav>
 
       <div className="mt-3 grid gap-8 lg:grid-cols-[1fr_380px]">
