@@ -39,7 +39,7 @@ describe("주기 작업", () => {
     let locked!: () => void;
     const isLocked = new Promise<void>((r) => (locked = r));
     const holder = db.$transaction(async (tx) => {
-      await tx.$queryRaw`SELECT pg_advisory_xact_lock(7101)`;
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(7101)`;
       locked();
       await held;
     }, { timeout: 30_000 });

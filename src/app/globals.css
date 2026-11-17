@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
-  /* 누비투어 고유 색: 깊은 바다(주색)와 노을(강조색) */
+  --font-sans: "Pretendard Variable", "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  /* 누비투어 고유 색: 깊은 바다(주색)와 노을(가격·결제에만) */
   --color-sea-50: #eef7fb;
   --color-sea-100: #d5ecf5;
   --color-sea-200: #aad8eb;
@@ -16,12 +16,51 @@
   --color-dusk-400: #ff9a62;
   --color-dusk-500: #f57a3d;
   --color-dusk-600: #dc5f22;
+  --color-ink: #17242f;
 }
 
 html {
   -webkit-text-size-adjust: 100%;
 }
 body {
-  @apply bg-white text-slate-900 antialiased;
+  @apply bg-white text-ink antialiased;
   word-break: keep-all;
+  font-feature-settings: "tnum" 0;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-sea-500);
+  outline-offset: 2px;
+}
+
+@utility btn {
+  @apply inline-flex items-center justify-center gap-1.5 rounded-lg px-4 py-2.5 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+}
+@utility btn-primary {
+  @apply btn bg-sea-700 text-white hover:bg-sea-800;
+}
+@utility btn-pay {
+  @apply btn bg-dusk-500 text-white hover:bg-dusk-600;
+}
+@utility btn-line {
+  @apply btn border border-slate-300 bg-white text-ink hover:border-sea-500 hover:text-sea-700;
+}
+@utility field {
+  @apply w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-sea-500 focus:ring-2 focus:ring-sea-100;
+}
+@utility label {
+  @apply mb-1 block text-sm font-medium text-slate-700;
+}
+@utility price {
+  @apply font-bold tabular-nums text-dusk-600;
+}
+@utility badge {
+  @apply inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
 }
