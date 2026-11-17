@@ -31,7 +31,7 @@ jobs:
           --health-interval 5s --health-timeout 5s --health-retries 10
     env:
       DATABASE_URL: postgresql://nubi:nubi@localhost:5432/nubi_test
-      SESSION_SECRET: ci-only-secret
+      SESSION_SECRET: ci-only-session-secret-0123456789abcdef
       APP_BASE_URL: http://localhost:3000
       JOBS_ENABLED: "false"
     steps:
@@ -65,7 +65,7 @@ jobs:
           --health-interval 5s --health-timeout 5s --health-retries 10
     env:
       DATABASE_URL: postgresql://nubi:nubi@localhost:5432/nubi_e2e
-      SESSION_SECRET: ci-only-secret
+      SESSION_SECRET: ci-only-session-secret-0123456789abcdef
       APP_BASE_URL: http://localhost:3000
       JOBS_ENABLED: "false"
       SEED_STAFF_EMAIL: admin@nubi.test
@@ -106,7 +106,7 @@ jobs:
         run: |
           cp .env.example .env
           sed -i 's/^POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=ci-only-db-pass/' .env
-          sed -i 's/^SESSION_SECRET=.*/SESSION_SECRET=ci-only-session-secret/' .env
+          sed -i 's/^SESSION_SECRET=.*/SESSION_SECRET=ci-only-session-secret-0123456789abcdef/' .env
           sed -i 's/^SEED_STAFF_EMAIL=.*/SEED_STAFF_EMAIL=admin@nubi.test/' .env
           sed -i 's/^SEED_STAFF_PASSWORD=.*/SEED_STAFF_PASSWORD=ci-only-admin-pass/' .env
       - run: docker compose config -q

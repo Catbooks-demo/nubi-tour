@@ -107,6 +107,7 @@ model Departure {
   deposit_per_person Int       @default(300000)
   status             String    @default("open") // open, confirmed, closed, cancelled, departed
   seats_taken        Int       @default(0) // 좌석 수 캐시: 예약 서비스만 바꾼다
+  manual_closed      Boolean   @default(false) // 직원이 직접 마감함: 다시 계산해도 마감 유지
   bookings           Booking[]
   created_at         DateTime  @default(now())
   updated_at         DateTime  @updatedAt

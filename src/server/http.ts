@@ -65,9 +65,15 @@ export function readCookie(req: Request, name: string): string | undefined {
   return undefined;
 }
 
-/** 요청한 곳 IP (프록시 뒤면 x-forwarded-for 첫 값). */
+/**
+ * 요청한 곳 IP. x-forwarded-for의 첫 값은 손님이 마음대로 넣을 수 있으므로,
+ * 우리 nginx가 마지막에 붙인 값(바로 앞 접속 주소)을 쓴다.
+ */
 export function clientIp(req: Request): string {
   const fwd = req.headers.get("x-forwarded-for");
-  if (fwd) return fwd.split(",")[0].trim();
+  if (fwd) {
+    const hops = fwd.split(",").map((s) => s.trim()).filter(Boolean);
+    if (hops.length) return hops[hops.length - 1];
+  }
   return req.headers.get("x-real-ip") ?? "local";
 }

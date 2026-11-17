@@ -5,7 +5,7 @@ import { db } from "./db";
 import { HttpError } from "./http";
 import { log } from "./log";
 import { recordMessage, won } from "./messages";
-import { refund } from "./payments";
+import { refundTo } from "./payments";
 
 export interface DashboardCounts {
   todayBookings: number;
@@ -50,7 +50,7 @@ export async function dashboardCounts(now = new Date()): Promise<DashboardCounts
  * 환불은 결제사 호출이라 DB 처리 뒤에 한다.
  */
 export async function approveCancel(code: string, staffId: string, opts: { fee?: number; reason?: string } = {}, now = new Date()) {
-  const { bookingId, refundAmount } = await db.$transaction(async (tx) => {
+  const { bookingId, refundAmount, fee: keep } = await db.$transaction(async (tx) => {
     const b = await lockBooking(tx, code);
     if (b.status !== "cancel_requested") throw new HttpError(409, "BAD_STATE", "취소 요청 상태가 아니에요.");
     const c = await tx.cancellation.findFirst({ where: { booking_id: b.id, status: "requested" }, orderBy: { created_at: "desc" } });
@@ -72,10 +72,10 @@ export async function approveCancel(code: string, staffId: string, opts: { fee?:
     await releaseSeats(tx, b, now);
     await recordMessage(tx, b, "cancelled", "취소 완료", `예약이 취소됐어요. 취소 수수료 ${won(fee)}, 환불 ${won(refundAmount)}이에요.`);
     await audit(`staff:${staffId}`, "cancellation.approve", b.code, { fee, refund: refundAmount, changed: fee !== c.fee, reason: opts.reason ?? null }, tx);
-    return { bookingId: b.id, refundAmount };
+    return { bookingId: b.id, refundAmount, fee };
   });
   try {
-    await refund(bookingId, refundAmount, "손님 취소 환불");
+    await refundTo(bookingId, keep, "손님 취소 환불");
   } catch (e) {
     log.error("취소 승인 뒤 환불 실패", { code, error: e instanceof Error ? e.message : String(e) });
     throw new HttpError(502, "REFUND_FAILED", "예약은 취소했지만 환불이 실패했어요. 결제 내역을 확인하고 다시 시도해 주세요.");
@@ -83,13 +83,15 @@ export async function approveCancel(code: string, staffId: string, opts: { fee?:
   return { refund: refundAmount };
 }
 
-/** 미처리 환불 다시 시도 (환불액보다 덜 돌려준 취소 예약). */
+/**
+ * 미처리 환불 다시 시도: 취소 예약은 수수료만 남기고, 만료 예약(늦게 들어온 결제)은 전부 돌려준다.
+ * 응답이 끊겼던 환불은 같은 멱등 키로 다시 보내므로 두 번 나가지 않는다.
+ */
 export async function retryRefund(code: string, staffId: string) {
   const b = await db.booking.findUnique({ where: { code }, include: { cancellations: { where: { status: "done" }, orderBy: { created_at: "desc" }, take: 1 } } });
-  if (!b || b.status !== "cancelled" || !b.cancellations[0]) throw new HttpError(409, "BAD_STATE", "다시 환불할 예약이 아니에요.");
-  const left = b.paid_amount - b.cancellations[0].fee;
-  if (left <= 0) return { refund: 0 };
-  const done = await refund(b.id, left, "환불 재시도");
+  const keep = b?.status === "cancelled" && b.cancellations[0] ? b.cancellations[0].fee : b?.status === "expired" ? 0 : null;
+  if (!b || keep === null) throw new HttpError(409, "BAD_STATE", "다시 환불할 예약이 아니에요.");
+  const done = await refundTo(b.id, keep, "환불 재시도");
   await audit(`staff:${staffId}`, "refund.retry", code, { amount: done });
   return { refund: done };
 }

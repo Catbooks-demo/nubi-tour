@@ -20,9 +20,12 @@ export async function refreshDepartureStatus(tx: Tx, departureId: string): Promi
     seats_taken: d.seats_taken,
     paidSeats: await paidSeats(tx, departureId),
     current: d.status,
+    manual_closed: d.manual_closed,
   });
-  if (next !== d.status) await tx.departure.update({ where: { id: departureId }, data: { status: next } });
-  return next;
+  if (next === d.status) return next;
+  // 읽은 뒤 다른 곳이 상태를 바꿨으면(예: 출발 취소) 덮어쓰지 않는다
+  const changed = await tx.departure.updateMany({ where: { id: departureId, status: d.status }, data: { status: next } });
+  return changed.count ? next : (await tx.departure.findUniqueOrThrow({ where: { id: departureId } })).status;
 }
 
 /** 출발일 행 잠금 (같은 출발일 예약·취소를 한 줄로 세운다). */

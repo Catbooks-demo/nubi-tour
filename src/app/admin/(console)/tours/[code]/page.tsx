@@ -63,8 +63,8 @@ export default async function AdminTour({ params, searchParams }: { params: Prom
                   <div className="flex flex-wrap items-center gap-2">
                     <form action={departureStatusAction}>
                       <input type="hidden" name="id" value={d.id} /><input type="hidden" name="back" value={back} />
-                      <input type="hidden" name="status" value={d.status === "closed" ? "open" : "closed"} />
-                      <button className="btn-line px-2 py-1 text-xs">{d.status === "closed" ? "다시 열기" : "마감"}</button>
+                      <input type="hidden" name="status" value={d.manual_closed ? "open" : "closed"} />
+                      <button className="btn-line px-2 py-1 text-xs">{d.manual_closed ? "다시 열기" : "마감"}</button>
                     </form>
                     <details>
                       <summary className="cursor-pointer text-xs text-rose-600">출발 취소</summary>

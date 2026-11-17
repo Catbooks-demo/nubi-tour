@@ -36,7 +36,7 @@ chmod 600 .env
 | 값 | 넣을 것 |
 |---|---|
 | `POSTGRES_PASSWORD` | DB 비밀번호. `openssl rand -base64 24` |
-| `SESSION_SECRET` | 세션 서명 비밀값. `openssl rand -base64 32` |
+| `SESSION_SECRET` | 세션·비회원 쿠키 서명 비밀값, **32자 이상** (짧으면 앱이 켜지지 않아요). `openssl rand -base64 32` |
 | `APP_BASE_URL` | 손님이 들어올 주소 (`https://<도메인>`). https면 쿠키에 Secure가 붙어요 |
 | `APP_PORT` | 앱이 열 포트 (기본 3100) |
 | `TOSS_CLIENT_KEY`, `TOSS_SECRET_KEY` | 토스페이먼츠 **테스트** 키(`test_`로 시작). 비우면 모의 결제. `live_` 키를 넣으면 앱이 켜지지 않아요 |
@@ -86,7 +86,7 @@ server {
     location / {
         proxy_pass http://127.0.0.1:3100;
         proxy_set_header Host $host;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-For $remote_addr;   # 손님이 보낸 값을 이어 붙이지 않고 실제 접속 주소로 덮어쓴다
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 }
@@ -96,7 +96,7 @@ server {
 sudo nginx -t && sudo systemctl reload nginx
 ```
 
-`X-Forwarded-For`는 로그인 시도 제한이 손님 IP를 구분하는 데 써요. 같은 서버의 다른 서비스와 nginx를 같이 쓰면 바꾸기 전에 담당자에게 알려 주세요.
+`X-Forwarded-For`는 로그인·조회 시도 제한이 손님 IP를 구분하는 데 써요. 손님이 보낸 값을 그대로 이어 붙이면(`$proxy_add_x_forwarded_for`) 제한을 피할 수 있으니 꼭 `$remote_addr`로 덮어써 주세요. 같은 서버의 다른 서비스와 nginx를 같이 쓰면 바꾸기 전에 담당자에게 알려 주세요.
 
 ## 8. 매일 백업
 

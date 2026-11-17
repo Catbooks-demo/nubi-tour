@@ -25,6 +25,14 @@ export function assertSafeTossKeys(e: { TOSS_CLIENT_KEY?: string; TOSS_SECRET_KE
   }
 }
 
+/** 운영에서는 세션·비회원 쿠키 서명 비밀값이 32자 이상이어야 켜진다 (빌드 단계는 제외). */
+export function assertSessionSecret(secret: string): void {
+  const production = process.env.NODE_ENV === "production" && process.env.NEXT_PHASE !== "phase-production-build";
+  if (production && secret.trim().length < 32) {
+    throw new Error("SESSION_SECRET을 32자 이상으로 넣어 주세요 (openssl rand -base64 32).");
+  }
+}
+
 let cached: Env | null = null;
 
 export function getEnv(): Env {
@@ -34,6 +42,7 @@ export function getEnv(): Env {
   parsed.TOSS_CLIENT_KEY = clean(parsed.TOSS_CLIENT_KEY);
   parsed.TOSS_SECRET_KEY = clean(parsed.TOSS_SECRET_KEY);
   assertSafeTossKeys(parsed);
+  assertSessionSecret(parsed.SESSION_SECRET);
   cached = parsed;
   return parsed;
 }

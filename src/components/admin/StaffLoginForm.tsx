@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { api } from "@/lib/api";
+import { safeNext } from "@/lib/nav";
 
 export function StaffLoginForm({ next }: { next?: string }) {
   const router = useRouter();
@@ -18,7 +19,8 @@ export function StaffLoginForm({ next }: { next?: string }) {
         setError(null);
         try {
           await api("/api/admin/auth/login", f);
-          router.push(next && next.startsWith("/admin") ? next : "/admin");
+          const to = safeNext(next, "/admin");
+          router.push(to.startsWith("/admin") ? to : "/admin");
           router.refresh();
         } catch (err) {
           setError(err instanceof Error ? err.message : String(err));

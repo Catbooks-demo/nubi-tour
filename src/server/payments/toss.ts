@@ -49,6 +49,22 @@ export async function tossConfirm(p: { paymentKey: string; orderId: string; amou
   return post("/confirm", p);
 }
 
+/** 결제 조회 (승인 응답이 끊겼을 때 실제로 승인됐는지 확인). */
+export async function tossLookup(paymentKey: string): Promise<{ status: string; orderId: string; totalAmount: number }> {
+  let res: Response;
+  try {
+    res = await fetch(`${API}/${encodeURIComponent(paymentKey)}`, {
+      headers: { Authorization: auth() },
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+    });
+  } catch {
+    throw new TossError("TIMEOUT", "결제사 조회 응답이 늦어요.", true);
+  }
+  const data = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+  if (!res.ok) throw new TossError(String(data.code ?? `HTTP_${res.status}`), String(data.message ?? "결제 조회 실패"));
+  return { status: String(data.status ?? ""), orderId: String(data.orderId ?? ""), totalAmount: Number(data.totalAmount ?? NaN) };
+}
+
 /** 결제 취소(부분 취소 가능). 같은 환불을 두 번 보내도 한 번만 되도록 멱등 키를 쓴다. */
 export async function tossCancel(paymentKey: string, cancelAmount: number, cancelReason: string, idempotencyKey: string) {
   return post(`/${encodeURIComponent(paymentKey)}/cancel`, { cancelAmount, cancelReason }, idempotencyKey);

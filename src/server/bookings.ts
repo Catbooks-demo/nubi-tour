@@ -65,8 +65,8 @@ export async function createBooking(
     await lockDeparture(tx, input.departure_id);
     const dep = await tx.departure.findUnique({ where: { id: input.departure_id }, include: { product: true } });
     if (!dep || !dep.product.on_sale) throw new HttpError(404, "NOT_FOUND", "상품을 찾지 못했어요.");
-    if (dep.status === "cancelled" || dep.status === "departed") {
-      throw new HttpError(409, "CLOSED", "예약할 수 없는 출발일이에요.");
+    if (dep.status === "cancelled" || dep.status === "departed" || dep.manual_closed) {
+      throw new HttpError(409, "CLOSED", dep.manual_closed ? "예약이 마감된 출발일이에요." : "예약할 수 없는 출발일이에요.");
     }
 
     checkTravelers(input.travelers, input.pax, dep.depart_date, kstDate(now));
@@ -174,11 +174,14 @@ export async function lockBooking(tx: Tx, code: string): Promise<Booking> {
   return tx.booking.findUniqueOrThrow({ where: { id: rows[0].id } });
 }
 
-export function setStatus(tx: Tx, b: Booking, to: BookingStatus, extra: Prisma.BookingUpdateInput = {}) {
+/** 상태 바꾸기. 읽은 뒤 다른 곳이 이미 상태를 바꿨으면 덮어쓰지 않고 409. */
+export async function setStatus(tx: Tx, b: Booking, to: BookingStatus, extra: Prisma.BookingUpdateManyMutationInput = {}): Promise<Booking> {
   if (!canTransition(b.status as BookingStatus, to)) {
     throw new HttpError(409, "BAD_STATE", "지금 상태에서는 할 수 없어요.");
   }
-  return tx.booking.update({ where: { id: b.id }, data: { status: to, ...extra } });
+  const changed = await tx.booking.updateMany({ where: { id: b.id, status: b.status }, data: { status: to, ...extra } });
+  if (!changed.count) throw new HttpError(409, "BAD_STATE", "예약 상태가 방금 바뀌었어요. 새로고침해 주세요.");
+  return tx.booking.findUniqueOrThrow({ where: { id: b.id } });
 }
 
 // ── 취소 ──
