@@ -45,3 +45,6 @@ export async function authApiKey(req: Request, need: "read" | "write"): Promise<
 }
 
 export const canSeePii = (k: ApiKey) => k.scopes.includes("read_pii");
+
+/** 새로 만든 키 원문을 다음 화면에 한 번 넘기는 쿠키 이름. */
+export const NEW_KEY_COOKIE = "nb_newkey";
