@@ -1,0 +1,27 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  /* 누비투어 고유 색: 깊은 바다(주색)와 노을(강조색) */
+  --color-sea-50: #eef7fb;
+  --color-sea-100: #d5ecf5;
+  --color-sea-200: #aad8eb;
+  --color-sea-300: #74bddc;
+  --color-sea-400: #3f9cc6;
+  --color-sea-500: #1f7fab;
+  --color-sea-600: #156690;
+  --color-sea-700: #125275;
+  --color-sea-800: #10425e;
+  --color-sea-900: #0c3249;
+  --color-dusk-400: #ff9a62;
+  --color-dusk-500: #f57a3d;
+  --color-dusk-600: #dc5f22;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+body {
+  @apply bg-white text-slate-900 antialiased;
+  word-break: keep-all;
+}
