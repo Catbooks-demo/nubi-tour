@@ -6,3 +6,382 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+// 금액은 모두 정수 원. 시각은 UTC로 저장하고 화면·날짜 계산은 한국 시간.
+// 표·컬럼 이름은 영어 snake_case (읽기 전용 DB 계정이 보는 계약이라 마이그레이션으로만 바꾼다).
+
+model Region {
+  id         String    @id @default(cuid())
+  code       String    @unique // japan, southeast-asia, china, europe, americas, oceania
+  name       String
+  sort_order Int       @default(0)
+  products   Product[]
+  created_at DateTime  @default(now())
+
+  @@map("regions")
+}
+
+model Theme {
+  id         String         @id @default(cuid())
+  code       String         @unique
+  name       String
+  products   ProductTheme[]
+  created_at DateTime       @default(now())
+
+  @@map("themes")
+}
+
+model Product {
+  id                String         @id @default(cuid())
+  code              String         @unique // NB-JP-OSA-04
+  name              String
+  region_id         String
+  region            Region         @relation(fields: [region_id], references: [id])
+  country           String
+  cities            String[]
+  nights            Int
+  days              Int
+  airline           String
+  departure_airport String
+  summary           String
+  highlights        String[]
+  includes          String[]
+  excludes          String[]
+  optional_tours    Json           @default("[]") // [{name, price, note}]
+  shopping_count    Int            @default(0)
+  guide             String // 현지 가이드, 인솔자 동행 등
+  travel_docs       String // 여권·비자 안내
+  base_price        Int // 목록에 보이는 "최저가" 기준
+  on_sale           Boolean        @default(true)
+  sort_rank         Int            @default(100)
+  themes            ProductTheme[]
+  itinerary         ItineraryDay[]
+  departures        Departure[]
+  created_at        DateTime       @default(now())
+  updated_at        DateTime       @updatedAt
+
+  @@index([region_id])
+  @@index([updated_at])
+  @@map("products")
+}
+
+model ProductTheme {
+  product_id String
+  theme_id   String
+  product    Product @relation(fields: [product_id], references: [id], onDelete: Cascade)
+  theme      Theme   @relation(fields: [theme_id], references: [id], onDelete: Cascade)
+
+  @@id([product_id, theme_id])
+  @@map("product_themes")
+}
+
+model ItineraryDay {
+  id         String   @id @default(cuid())
+  product_id String
+  product    Product  @relation(fields: [product_id], references: [id], onDelete: Cascade)
+  day        Int
+  city       String
+  title      String
+  details    String[]
+  breakfast  String // 호텔식, 현지식, 불포함, 기내식 …
+  lunch      String
+  dinner     String
+  hotel      String
+
+  @@unique([product_id, day])
+  @@map("itinerary_days")
+}
+
+model Departure {
+  id                 String    @id @default(cuid())
+  product_id         String
+  product            Product   @relation(fields: [product_id], references: [id])
+  depart_date        String // YYYY-MM-DD (한국 날짜)
+  return_date        String
+  capacity           Int
+  min_pax            Int
+  price_adult        Int
+  price_child        Int
+  price_infant       Int
+  single_supplement  Int
+  deposit_per_person Int       @default(300000)
+  status             String    @default("open") // open, confirmed, closed, cancelled, departed
+  seats_taken        Int       @default(0) // 좌석 수 캐시: 예약 서비스만 바꾼다
+  bookings           Booking[]
+  created_at         DateTime  @default(now())
+  updated_at         DateTime  @updatedAt
+
+  @@unique([product_id, depart_date])
+  @@index([depart_date])
+  @@index([updated_at])
+  @@map("departures")
+}
+
+model User {
+  id               String    @id @default(cuid())
+  email            String    @unique
+  password_hash    String
+  name             String
+  phone            String
+  marketing_opt_in Boolean   @default(false)
+  sessions         Session[]
+  bookings         Booking[]
+  inquiries        Inquiry[]
+  reviews          Review[]
+  created_at       DateTime  @default(now())
+  updated_at       DateTime  @updatedAt
+
+  @@index([updated_at])
+  @@map("users")
+}
+
+model Session {
+  token_hash String   @id
+  user_id    String
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  expires_at DateTime
+  created_at DateTime @default(now())
+
+  @@index([user_id])
+  @@map("sessions")
+}
+
+model Staff {
+  id            String         @id @default(cuid())
+  email         String         @unique
+  password_hash String
+  name          String
+  role          String // admin, agent
+  active        Boolean        @default(true)
+  sessions      StaffSession[]
+  created_at    DateTime       @default(now())
+  updated_at    DateTime       @updatedAt
+
+  @@map("staff")
+}
+
+model StaffSession {
+  token_hash String   @id
+  staff_id   String
+  staff      Staff    @relation(fields: [staff_id], references: [id], onDelete: Cascade)
+  expires_at DateTime
+  created_at DateTime @default(now())
+
+  @@index([staff_id])
+  @@map("staff_sessions")
+}
+
+model BookingCounter {
+  day  String @id // KST yyMMdd
+  last Int    @default(0)
+
+  @@map("booking_counters")
+}
+
+model Booking {
+  id                   String         @id @default(cuid())
+  code                 String         @unique // NB + yyMMdd + 4자리
+  user_id              String?
+  user                 User?          @relation(fields: [user_id], references: [id])
+  guest_pin_hash       String?
+  departure_id         String
+  departure            Departure      @relation(fields: [departure_id], references: [id])
+  contact_name         String
+  contact_phone        String
+  contact_email        String
+  adults               Int
+  children             Int            @default(0)
+  infants              Int            @default(0)
+  single_rooms         Int            @default(0)
+  total_amount         Int
+  deposit_amount       Int // 첫 결제 금액(전액 결제면 총액)
+  paid_amount          Int            @default(0) // 승인된 결제 − 환불
+  pay_mode             String // deposit, full
+  pay_deadline         DateTime
+  balance_deadline     DateTime?
+  status               String // pending_deposit, pending_full, deposit_paid, fully_paid, completed, cancel_requested, cancelled, expired
+  status_before_cancel String?
+  seats_released_at    DateTime?
+  staff_memo           String?
+  travelers            Traveler[]
+  payments             Payment[]
+  cancellations        Cancellation[]
+  inquiries            Inquiry[]
+  review               Review?
+  created_at           DateTime       @default(now())
+  updated_at           DateTime       @updatedAt
+
+  @@index([user_id])
+  @@index([departure_id])
+  @@index([status])
+  @@index([updated_at])
+  @@map("bookings")
+}
+
+model Traveler {
+  id             String   @id @default(cuid())
+  booking_id     String
+  booking        Booking  @relation(fields: [booking_id], references: [id], onDelete: Cascade)
+  type           String // adult, child, infant
+  name_ko        String
+  name_en        String // 여권 영문 이름 (KIM MINJI)
+  gender         String // F, M
+  birth_date     String // YYYY-MM-DD
+  passport_last4 String? // 여권번호 원문은 저장하지 않는다
+  created_at     DateTime @default(now())
+  updated_at     DateTime @updatedAt
+
+  @@index([booking_id])
+  @@map("travelers")
+}
+
+model Payment {
+  id               String    @id @default(cuid())
+  booking_id       String
+  booking          Booking   @relation(fields: [booking_id], references: [id])
+  kind             String // deposit, balance, full, refund
+  method           String // toss, mock
+  amount           Int // 항상 양수
+  status           String // pending, approved, failed, cancelled
+  toss_order_id    String?   @unique
+  toss_payment_key String?
+  refund_of_id     String?
+  refund_of        Payment?  @relation("RefundOf", fields: [refund_of_id], references: [id])
+  refunds          Payment[] @relation("RefundOf")
+  failure_reason   String?
+  approved_at      DateTime?
+  created_at       DateTime  @default(now())
+  updated_at       DateTime  @updatedAt
+
+  @@index([booking_id])
+  @@index([updated_at])
+  @@map("payments")
+}
+
+model Cancellation {
+  id           String    @id @default(cuid())
+  booking_id   String
+  booking      Booking   @relation(fields: [booking_id], references: [id])
+  requested_by String // customer, guest, staff, system
+  reason       String
+  days_before  Int
+  fee_rate     Float
+  fee          Int
+  paid         Int
+  refund       Int
+  status       String // requested, done, rejected
+  decided_by   String?
+  decide_note  String?
+  decided_at   DateTime?
+  created_at   DateTime  @default(now())
+  updated_at   DateTime  @updatedAt
+
+  @@index([booking_id])
+  @@index([status])
+  @@index([updated_at])
+  @@map("cancellations")
+}
+
+model Inquiry {
+  id          String    @id @default(cuid())
+  user_id     String?
+  user        User?     @relation(fields: [user_id], references: [id])
+  booking_id  String?
+  booking     Booking?  @relation(fields: [booking_id], references: [id])
+  name        String
+  email       String
+  category    String // booking, payment, cancel, product, etc
+  title       String
+  body        String
+  answer      String?
+  answered_by String?
+  answered_at DateTime?
+  status      String    @default("open") // open, answered
+  created_at  DateTime  @default(now())
+  updated_at  DateTime  @updatedAt
+
+  @@index([status])
+  @@index([updated_at])
+  @@map("inquiries")
+}
+
+model Review {
+  id         String   @id @default(cuid())
+  user_id    String
+  user       User     @relation(fields: [user_id], references: [id])
+  booking_id String   @unique
+  booking    Booking  @relation(fields: [booking_id], references: [id])
+  product_id String
+  rating     Int
+  body       String
+  hidden     Boolean  @default(false)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@index([product_id])
+  @@map("reviews")
+}
+
+model Notice {
+  id         String   @id @default(cuid())
+  kind       String // notice, faq
+  category   String?
+  title      String
+  body       String
+  pinned     Boolean  @default(false)
+  published  Boolean  @default(true)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("notices")
+}
+
+model Message {
+  id         String   @id @default(cuid())
+  booking_id String?
+  channel    String // sms, email
+  to         String
+  kind       String // payment_done, deposit_expired, balance_reminder, cancelled, departure_cancelled …
+  subject    String
+  body       String
+  created_at DateTime @default(now())
+
+  @@index([booking_id, kind])
+  @@map("messages")
+}
+
+model ApiKey {
+  id           String    @id @default(cuid())
+  name         String
+  prefix       String
+  key_hash     String    @unique
+  scopes       String[]
+  last_used_at DateTime?
+  revoked_at   DateTime?
+  created_by   String?
+  created_at   DateTime  @default(now())
+
+  @@map("api_keys")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actor      String // staff:<id>, api:<key name>, system
+  action     String
+  target     String
+  detail     Json?
+  created_at DateTime @default(now())
+
+  @@index([created_at])
+  @@map("audit_logs")
+}
+
+model JobRun {
+  id          String    @id @default(cuid())
+  started_at  DateTime  @default(now())
+  finished_at DateTime?
+  result      Json?
+  error       String?
+
+  @@map("job_runs")
+}
