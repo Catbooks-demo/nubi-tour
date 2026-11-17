@@ -86,3 +86,10 @@ jobs:
           name: playwright-report
           path: playwright-report
           retention-days: 7
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screens
+          path: screens
+          retention-days: 7
+          if-no-files-found: ignore
