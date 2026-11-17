@@ -68,6 +68,8 @@ export function DepartureCalendar({ departures, initialId }: { departures: Depar
               key={date}
               onClick={() => setSelected(d)}
               aria-pressed={isSel}
+              data-date={date}
+              data-bookable={d.bookable}
               aria-label={`${dateKo(date)} ${DEPARTURE_BADGE[d.status]?.label ?? ""} ${won(d.price_adult)}`}
               className={`flex flex-col items-center rounded-md border py-1.5 ${
                 isSel ? "border-sea-700 bg-sea-700 text-white" : d.bookable ? "border-sea-100 bg-sea-50 hover:border-sea-400" : "border-slate-100 bg-slate-50 text-slate-400"

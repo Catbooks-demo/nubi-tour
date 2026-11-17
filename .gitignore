@@ -12,3 +12,4 @@ test-results/
 .superpowers/
 tsconfig.tsbuildinfo
 next-env.d.ts
+screens/
