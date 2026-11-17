@@ -98,6 +98,6 @@ test("한 번에 9명을 넘게 고르면 예약 버튼이 막힌다", async ({ 
   await page.goto("/tours/NB-FJ-NAN-07");
   await page.getByRole("link", { name: "이 날짜로 예약하기" }).click();
   for (let i = 0; i < 8; i++) await page.getByRole("button", { name: "성인 늘리기" }).click();
-  await expect(page.getByText("한 번에 9명까지 예약할 수 있어요.")).toBeVisible();
+  await expect(page.locator("p[role=alert]")).toHaveText("한 번에 9명까지 예약할 수 있어요.");
   await expect(page.getByRole("button", { name: "예약하기", exact: true })).toBeDisabled();
 });
