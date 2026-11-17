@@ -10,8 +10,7 @@ export const DEPARTURE_STATUS_KO: Record<DepartureStatus, string> = {
 
 /**
  * 출발일 상태 다시 계산. cancelled·departed는 그대로.
- * 좌석이 다 차면 closed, 예약금 이상 낸 좌석이 최소 인원을 넘으면 confirmed, 아니면 open.
- * (closed여도 확정 조건을 채웠는지는 화면에서 따로 보여 줄 수 있게 confirmedFlag를 함께 쓴다.)
+ * 직원이 마감했거나 좌석이 다 차면 closed, 예약금 이상 낸 좌석이 최소 인원을 넘으면 confirmed, 아니면 open.
  */
 export function departureStatus(d: {
   capacity: number;
@@ -19,9 +18,10 @@ export function departureStatus(d: {
   seats_taken: number;
   paidSeats: number;
   current: string;
+  manual_closed?: boolean;
 }): DepartureStatus {
   if (d.current === "cancelled" || d.current === "departed") return d.current;
-  if (d.seats_taken >= d.capacity) return "closed";
+  if (d.manual_closed || d.seats_taken >= d.capacity) return "closed";
   if (d.paidSeats >= d.min_pax) return "confirmed";
   return "open";
 }

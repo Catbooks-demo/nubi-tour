@@ -139,11 +139,13 @@ describe("I3 승인 응답이 애매할 때", () => {
   it("시간 초과면 결제 키를 남기고 대기, 주기 작업이 토스에 물어 반영한다", async () => {
     useToss(true);
     let confirmCalls = 0;
+    let lookups = 0;
     vi.stubGlobal("fetch", vi.fn(async (url: string) => {
       if (url.endsWith("/confirm")) {
         confirmCalls++;
         throw new Error("timeout");
       }
+      if (++lookups === 1) throw new Error("timeout"); // 승인 직후 조회도 끊김
       return new Response(JSON.stringify({ status: "DONE", orderId: cur.orderId, totalAmount: cur.amount, paymentKey: "pkT" }), { status: 200 });
     }));
     const { departure } = await makeDeparture({ daysAhead: 40 });

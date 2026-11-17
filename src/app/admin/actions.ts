@@ -14,6 +14,7 @@ import { requestCancel } from "@/server/bookings";
 import { db } from "@/server/db";
 import { HttpError } from "@/server/http";
 import { answerInquiry } from "@/server/inquiries";
+import { refreshDepartureStatus } from "@/server/departures";
 import { cancelDeparture } from "@/server/jobs";
 
 const s = (f: FormData, k: string) => String(f.get(k) ?? "").trim();
@@ -165,7 +166,11 @@ export async function departureStatusAction(f: FormData) {
     if (status !== "open" && status !== "closed") throw new HttpError(400, "BAD_STATUS", "예약 가능·마감만 바꿀 수 있어요.");
     const d = await db.departure.findUniqueOrThrow({ where: { id: s(f, "id") } });
     if (d.status === "cancelled" || d.status === "departed") throw new HttpError(409, "BAD_STATE", "취소됐거나 출발한 출발일이에요.");
-    await db.departure.update({ where: { id: d.id }, data: { status } });
+    // 직원 마감은 표시로 남겨 다시 계산해도 유지된다. 다시 열면 좌석·결제로 상태를 다시 계산한다.
+    await db.$transaction(async (tx) => {
+      await tx.departure.update({ where: { id: d.id }, data: { manual_closed: status === "closed", ...(status === "closed" ? { status } : {}) } });
+      await refreshDepartureStatus(tx, d.id);
+    });
     await audit(`staff:${st.id}`, "departure.status", d.id, { from: d.status, to: status });
     return status === "closed" ? "예약을 마감했어요." : "예약을 다시 열었어요.";
   });

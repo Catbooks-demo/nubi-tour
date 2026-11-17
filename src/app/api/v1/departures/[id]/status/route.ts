@@ -18,7 +18,8 @@ export const POST = route<Ctx>(async (req, { params }) => {
   if (d.status === "cancelled" || d.status === "departed") {
     throw new HttpError(409, "BAD_STATE", "취소됐거나 출발한 출발일은 바꿀 수 없어요.");
   }
-  await db.departure.update({ where: { id }, data: { status } });
+  // closed는 직원 마감처럼 유지된다(다시 계산해도 마감). open·confirmed는 마감 표시를 푼다.
+  await db.departure.update({ where: { id }, data: { status, manual_closed: status === "closed" } });
   await audit(`api:${key.name}`, "departure.status", id, { from: d.status, to: status });
   return NextResponse.json({ ok: true });
 });

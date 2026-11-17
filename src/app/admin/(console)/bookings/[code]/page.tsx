@@ -20,7 +20,7 @@ export default async function AdminBooking({ params, searchParams }: { params: P
   const now = calcCancel(b.total_amount, b.paid_amount, b.departure.depart_date, new Date());
   const messages = await db.message.findMany({ where: { booking_id: b.id }, orderBy: { created_at: "desc" } });
   const done = b.cancellations.find((c) => c.status === "done");
-  const refundLeft = status === "cancelled" && done ? b.paid_amount - done.fee : 0;
+  const refundLeft = status === "cancelled" && done ? b.paid_amount - done.fee : status === "expired" ? b.paid_amount : 0;
 
   return (
     <>

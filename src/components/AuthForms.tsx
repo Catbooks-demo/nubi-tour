@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { api } from "@/lib/api";
+import { safeNext } from "@/lib/nav";
 
 function useSubmit() {
   const [error, setError] = useState<string | null>(null);
@@ -21,7 +22,7 @@ function useSubmit() {
   return { error, busy, run };
 }
 
-const safeNext = (next?: string) => (next && next.startsWith("/") && !next.startsWith("//") ? next : "/my");
+
 
 export function LoginForm({ next }: { next?: string }) {
   const router = useRouter();
