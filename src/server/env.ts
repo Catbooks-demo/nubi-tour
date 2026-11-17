@@ -38,6 +38,11 @@ export function getEnv(): Env {
   return parsed;
 }
 
+/** 시험용: 환경변수를 바꾼 뒤 다시 읽게 한다. */
+export function resetEnvCache(): void {
+  cached = null;
+}
+
 /** 토스 테스트 결제가 켜져 있는지 (두 키가 모두 있을 때만). */
 export function tossEnabled(): boolean {
   const e = getEnv();
