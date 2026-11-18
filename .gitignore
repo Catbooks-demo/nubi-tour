@@ -13,3 +13,6 @@ test-results/
 tsconfig.tsbuildinfo
 next-env.d.ts
 screens/
+
+# 가상 예약 정답지·회원 표·매일 모드 상태 (로컬 전용, 커밋 금지)
+synthetic-out/
