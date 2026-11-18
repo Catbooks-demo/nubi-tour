@@ -44,11 +44,21 @@ export interface DepartureSeed {
   single_supplement: number;
 }
 
-/** 오늘(KST) 3일 뒤부터 90일 안의 출발일. */
-export function planDepartures(p: SeedProduct, today: string): DepartureSeed[] {
+/**
+ * 오늘(KST) 3일 뒤부터 90일 안의 출발일. `range`로 범위(오늘 기준 일 수, 양 끝 포함)를 바꿀 수 있다:
+ * 가상 데이터는 지난 출발일(`from` 음수)도 같은 규칙으로 만든다. 날짜·가격은 상품 코드와 날짜로만 정해져
+ * 기준일이 달라도 같은 날의 출발일은 같다.
+ */
+export function planDepartures(
+  p: SeedProduct,
+  today: string,
+  range: { from?: number; to?: number } = {},
+): DepartureSeed[] {
   const days = departureWeekdays(p);
   const out: DepartureSeed[] = [];
-  for (let i = 3; i <= 90; i++) {
+  const from = range.from ?? 3;
+  const to = range.to ?? 90;
+  for (let i = from; i <= to; i++) {
     const date = addDays(today, i);
     if (!days.includes(weekday(date))) continue;
     const wd = weekday(date);
