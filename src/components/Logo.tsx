@@ -1,12 +1,11 @@
-/** 누비투어 글자 로고: 실로 꿰매며 나아가는 바늘땀(누비) 선 위에 이름. */
+import Image from "next/image";
+
+/** 누비투어 로고: 지구본 위로 나는 비행기 심볼 + 누비투어 글자 이미지 (public/brand). */
 export function Logo({ className = "" }: { className?: string }) {
   return (
     <span className={`inline-flex items-center gap-2 ${className}`}>
-      <svg viewBox="0 0 36 24" className="h-6 w-9" aria-hidden="true">
-        <path d="M2 16 Q10 4 18 12 T34 8" fill="none" stroke="#125275" strokeWidth="3" strokeLinecap="round" strokeDasharray="5 4" />
-        <circle cx="34" cy="8" r="3" fill="#f57a3d" />
-      </svg>
-      <span className="text-xl font-extrabold tracking-tight text-sea-800">누비투어</span>
+      <Image src="/brand/nubi-symbol.png" alt="" width={256} height={174} unoptimized className="h-7 w-auto" aria-hidden="true" />
+      <Image src="/brand/nubi-wordmark.png" alt="누비투어" width={325} height={96} unoptimized className="h-7 w-auto" />
     </span>
   );
 }
