@@ -49,7 +49,13 @@ export async function dashboardCounts(now = new Date()): Promise<DashboardCounts
  * 취소 승인: 수수료(바꾸면 사유 필수) 확정 → 예약 취소 → 좌석 반환 → 안내 → 환불.
  * 환불은 결제사 호출이라 DB 처리 뒤에 한다.
  */
-export async function approveCancel(code: string, staffId: string, opts: { fee?: number; reason?: string } = {}, now = new Date()) {
+export async function approveCancel(
+  code: string,
+  staffId: string,
+  opts: { fee?: number; reason?: string; actor?: string } = {},
+  now = new Date(),
+) {
+  const actor = opts.actor ?? `staff:${staffId}`;
   const { bookingId, refundAmount, fee: keep } = await db.$transaction(async (tx) => {
     const b = await lockBooking(tx, code);
     if (b.status !== "cancel_requested") throw new HttpError(409, "BAD_STATE", "취소 요청 상태가 아니에요.");
@@ -71,7 +77,7 @@ export async function approveCancel(code: string, staffId: string, opts: { fee?:
     await tx.booking.update({ where: { id: b.id }, data: { status: "cancelled" } });
     await releaseSeats(tx, b, now);
     await recordMessage(tx, b, "cancelled", "취소 완료", `예약이 취소됐어요. 취소 수수료 ${won(fee)}, 환불 ${won(refundAmount)}이에요.`);
-    await audit(`staff:${staffId}`, "cancellation.approve", b.code, { fee, refund: refundAmount, changed: fee !== c.fee, reason: opts.reason ?? null }, tx);
+    await audit(actor, "cancellation.approve", b.code, { fee, refund: refundAmount, changed: fee !== c.fee, reason: opts.reason ?? null }, tx);
     return { bookingId: b.id, refundAmount, fee };
   });
   try {
@@ -97,7 +103,7 @@ export async function retryRefund(code: string, staffId: string) {
 }
 
 /** 취소 거절: 원래 상태로 돌린다. */
-export async function rejectCancel(code: string, staffId: string, reason: string, now = new Date()) {
+export async function rejectCancel(code: string, staffId: string, reason: string, now = new Date(), actor = `staff:${staffId}`) {
   if (!reason.trim()) throw new HttpError(400, "REASON_REQUIRED", "거절 사유를 적어 주세요.");
   await db.$transaction(async (tx) => {
     const b = await lockBooking(tx, code);
@@ -108,6 +114,6 @@ export async function rejectCancel(code: string, staffId: string, reason: string
     });
     await tx.booking.update({ where: { id: b.id }, data: { status: b.status_before_cancel, status_before_cancel: null } });
     await recordMessage(tx, b, "cancel_rejected", "취소 요청 안내", `취소 요청을 처리하지 못했어요: ${reason.trim()}`);
-    await audit(`staff:${staffId}`, "cancellation.reject", b.code, { reason }, tx);
+    await audit(actor, "cancellation.reject", b.code, { reason }, tx);
   });
 }
