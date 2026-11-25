@@ -3,7 +3,7 @@ import { authApiKey, canSeePii } from "@/server/apikeys";
 import { db } from "@/server/db";
 import { route } from "@/server/http";
 import { pageOrder, pageResult, pageWhere, readPage } from "@/server/v1/paginate";
-import { bookingV1 } from "@/server/v1/serialize";
+import { BOOKING_REFUNDS, bookingV1 } from "@/server/v1/serialize";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +16,7 @@ export const GET = route(async (req) => {
     where: { ...pageWhere(p), ...(status ? { status } : {}) },
     orderBy: pageOrder,
     take: p.limit,
-    include: { departure: { include: { product: true } }, travelers: { orderBy: { created_at: "asc" } } },
+    include: { departure: { include: { product: true } }, travelers: { orderBy: { created_at: "asc" } }, payments: BOOKING_REFUNDS },
   });
   const pii = canSeePii(key);
   return NextResponse.json(pageResult(rows, p, (b) => bookingV1(b, pii)));

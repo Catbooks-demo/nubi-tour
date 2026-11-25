@@ -161,6 +161,21 @@ describe("취소 결정", () => {
     expect(other.status).toBe(409);
   });
 
+  it("예약 읽기에 환불액·환불 시각이 실린다 (환불 전 0·null)", async () => {
+    const rw = await issueApiKey("데이터", ["read", "write"]);
+    const { b, c } = await requested();
+    type Row = { code: string; paid_amount: number; refunded_amount: number; refunded_at: string | null };
+    const before = await call<{ data: Row }>(getOne, { headers: auth(rw.key), params: { code: b.code } });
+    expect(before.body.data).toMatchObject({ refunded_amount: 0, refunded_at: null, paid_amount: 600_000 });
+    await call(decide, { headers: auth(rw.key), params: { id: c.id }, body: { decision: "approve" } });
+    const one = await call<{ data: Row }>(getOne, { headers: auth(rw.key), params: { code: b.code } });
+    expect(one.body.data.refunded_amount).toBe(300_000);
+    expect(one.body.data.paid_amount).toBe(300_000); // 받은 돈은 환불만큼 줄어든다
+    expect(one.body.data.refunded_at).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    const list = await call<{ data: Row[] }>(listBookings, { headers: auth(rw.key), url: "http://localhost/api/v1/bookings" });
+    expect(list.body.data.find((r) => r.code === b.code)).toMatchObject({ refunded_amount: 300_000 });
+  });
+
   it("환불 금액을 바꾸면 사유가 필요하고, 받은 금액보다 많으면 안 된다", async () => {
     const w = await issueApiKey("고객지원", ["write"]);
     const { c } = await requested();

@@ -41,7 +41,7 @@ export const OPENAPI = {
       { name: "product_code", in: "query", schema: { type: "string" } },
       { name: "from", in: "query", schema: { type: "string", format: "date" } },
     ]),
-    "/api/v1/bookings": list("예약 목록 (status: pending_deposit, pending_full, deposit_paid, fully_paid, completed, cancel_requested, cancelled, expired)", [
+    "/api/v1/bookings": list("예약 목록 — 환불액 refunded_amount·마지막 환불 시각 refunded_at 포함 (status: pending_deposit, pending_full, deposit_paid, fully_paid, completed, cancel_requested, cancelled, expired)", [
       { name: "status", in: "query", schema: { type: "string" } },
     ]),
     "/api/v1/bookings/{code}": {
