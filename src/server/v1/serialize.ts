@@ -62,7 +62,26 @@ export function departureV1(d: Departure & { product?: Product }) {
   };
 }
 
-type BookingRow = Booking & { departure: Departure & { product: Product }; travelers: Traveler[] };
+type RefundRow = Pick<Payment, "amount" | "status" | "kind" | "approved_at" | "created_at">;
+type BookingRow = Booking & {
+  departure: Departure & { product: Product };
+  travelers: Traveler[];
+  payments?: RefundRow[];
+};
+
+/** 승인된 환불의 합과 마지막 환불 시각. 결제 목록을 읽지 않은 응답이면 0·null (11/25 AXcellent 매출 분석). */
+export function refundSummary(payments: RefundRow[] | undefined): { amount: number; at: string | null } {
+  const done = (payments ?? []).filter((p) => p.kind === "refund" && p.status === "approved");
+  if (done.length === 0) return { amount: 0, at: null };
+  const last = done.map((p) => p.approved_at ?? p.created_at).reduce((a, b) => (b > a ? b : a));
+  return { amount: done.reduce((n, p) => n + p.amount, 0), at: iso(last) };
+}
+
+/** 예약 읽기에 같이 싣는 결제(승인된 환불만). 두 예약 읽기 경로가 같은 include를 쓴다 */
+export const BOOKING_REFUNDS = {
+  where: { kind: "refund", status: "approved" },
+  select: { amount: true, status: true, kind: true, approved_at: true, created_at: true },
+} as const;
 
 export function bookingV1(b: BookingRow, pii: boolean) {
   return {
@@ -84,6 +103,9 @@ export function bookingV1(b: BookingRow, pii: boolean) {
     total_amount: b.total_amount,
     first_payment_amount: b.deposit_amount,
     paid_amount: b.paid_amount,
+    // 환불하면 paid_amount가 줄어든다. 환불액·시각을 따로 실어 받는 쪽이 매출에서 기간 안 환불로 뺄 수 있게
+    refunded_amount: refundSummary(b.payments).amount,
+    refunded_at: refundSummary(b.payments).at,
     pay_mode: b.pay_mode,
     pay_deadline: iso(b.pay_deadline),
     balance_deadline: iso(b.balance_deadline),
